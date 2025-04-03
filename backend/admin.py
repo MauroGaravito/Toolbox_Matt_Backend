@@ -76,12 +76,13 @@ class UserAdmin(ModelView, model=User):
     column_sortable_list = ["id", "username", "created_at"]
 
     form_excluded_columns = [
-        User.id.name,
-        User.created_at.name,
-        User.hashed_password.name,
-        User.generated_toolbox_talks.name,
-        User.activities.name
+        "id",
+        "created_at",
+        "hashed_password",
+        "generated_toolbox_talks",
+        "activities"
     ]
+
 
     can_create = True
     can_edit = True
