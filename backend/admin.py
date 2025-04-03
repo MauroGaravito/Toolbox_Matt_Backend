@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from backend.middleware.force_https_admin import ForceHttpsAdminFormMiddleware
+from middleware.force_https_admin import ForceHttpsAdminFormMiddleware
 
 # ✅ Agrega el path al backend para que se pueda importar desde cualquier punto
 sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'backend'))
