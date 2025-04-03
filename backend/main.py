@@ -4,8 +4,6 @@ from dotenv import load_dotenv
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.middleware.trustedhost import ProxyHeadersMiddleware
-
 
 # ✅ Cambiar el sys.path para incluir el directorio de backend dentro del contenedor
 sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'backend'))
@@ -31,17 +29,14 @@ import models
 # ✅ Instancia FastAPI
 app = FastAPI()
 
-# ✅ Middleware para proxy: Reconoce encabezados como X-Forwarded-Proto
-app.add_middleware(ProxyHeadersMiddleware)
-
 # ✅ Orígenes permitidos (desarrollo + producción)
 origins = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
     "http://localhost",
     "http://127.0.0.1",
-    "http://localhost:3000",          # 👈 necesario
-    "http://127.0.0.1:3000",          # 👈 necesario
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
     "https://toolbox.downundersolutions.com",
     "https://toolboxmattbackend-production.up.railway.app/",
 ]
