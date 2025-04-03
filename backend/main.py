@@ -4,6 +4,8 @@ from dotenv import load_dotenv
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.trustedhost import ProxyHeadersMiddleware
+
 
 # ✅ Cambiar el sys.path para incluir el directorio de backend dentro del contenedor
 sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'backend'))
@@ -29,7 +31,10 @@ import models
 # ✅ Instancia FastAPI
 app = FastAPI()
 
-# ✅ Orígenes permitidos (dev + producción)
+# ✅ Middleware para proxy: Reconoce encabezados como X-Forwarded-Proto
+app.add_middleware(ProxyHeadersMiddleware)
+
+# ✅ Orígenes permitidos (desarrollo + producción)
 origins = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
@@ -41,7 +46,6 @@ origins = [
     "https://toolboxmattbackend-production.up.railway.app/",
 ]
 
-
 # ✅ Middleware CORS
 app.add_middleware(
     CORSMiddleware,
@@ -52,10 +56,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ✅ Setup SQLAdmin
+# ✅ Setup del panel admin
 setup_admin(app)
 
-# ✅ Routers
+# ✅ Incluye los routers
 app.include_router(auth.router)
 app.include_router(toolbox_talks.router)
 app.include_router(reference_documents.router)
