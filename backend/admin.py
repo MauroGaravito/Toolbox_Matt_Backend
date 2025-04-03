@@ -36,7 +36,7 @@ class AdminAuth(AuthenticationBackend):
         user = db.query(User).filter(User.username == username).first()
         db.close()
 
-        if not user or not verify_password(password, user.hashed_password):
+        if not user or not verify_password(str(password), str(user.hashed_password)):
             return False
 
         token = jwt.encode({"sub": user.username}, self.secret_key, algorithm=ALGORITHM)
@@ -63,7 +63,7 @@ auth_backend = AdminAuth(secret_key=SECRET_KEY)
 class UserAdmin(ModelView, model=User):
     form_class = UserForm
 
-    column_list = [User.id, User.username, User.email, User.role, User.created_at]
+    column_list = ["id", "username", "email", "role", "created_at"]
     column_labels = {
         "id": "ID",
         "username": "Username",
@@ -72,15 +72,15 @@ class UserAdmin(ModelView, model=User):
         "created_at": "Created At"
     }
 
-    column_searchable_list = [User.username, User.email, User.role]
-    column_sortable_list = [User.id, User.username, "created_at"]
+    column_searchable_list = [User.username.name, User.email.name, User.role.name]
+    column_sortable_list = ["id", "username", "created_at"]
 
     form_excluded_columns = [
-        User.id,
-        User.created_at,
-        User.hashed_password,
-        User.generated_toolbox_talks,
-        User.activities
+        User.id.name,
+        User.created_at.name,
+        User.hashed_password.name,
+        User.generated_toolbox_talks.name,
+        User.activities.name
     ]
 
     can_create = True
@@ -123,6 +123,7 @@ def setup_admin(app):
         app,
         engine,
         authentication_backend=auth_backend,
-        base_url="/admin"  # <- IMPORTANTE: debe comenzar con "/"
+        base_url="https://toolboxmattbackend-production.up.railway.app/admin"  # 👈 fuerza HTTPS absoluto
     )
+
     admin.add_view(UserAdmin)
