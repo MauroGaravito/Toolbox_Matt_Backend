@@ -38,6 +38,7 @@ origins = [
     "http://localhost:3000",          # 👈 necesario
     "http://127.0.0.1:3000",          # 👈 necesario
     "https://toolbox.downundersolutions.com",
+    "https://toolboxmattbackend-production.up.railway.app/",
 ]
 
 
