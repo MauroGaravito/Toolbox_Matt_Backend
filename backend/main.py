@@ -5,13 +5,13 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-# ✅ Cambiar el sys.path para incluir el directorio de backend dentro del contenedor
+# ✅ Corrige path si backend está en subcarpeta
 sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'backend'))
 
-# ✅ Carga variables de entorno
+# ✅ Carga las variables de entorno
 load_dotenv()
 
-# ✅ Routers
+# ✅ Importa routers primero (no causa problemas)
 from routers import (
     auth,
     reference_documents,
@@ -22,14 +22,17 @@ from routers import (
     users,
 )
 
-# ✅ Panel admin
-from admin import setup_admin
+# ✅ Modelos de BD (asegura que estén inicializados antes del admin)
 import models
 
-# ✅ Instancia FastAPI
+# ✅ Instancia de FastAPI
 app = FastAPI()
 
-# ✅ Orígenes permitidos (desarrollo + producción)
+# ✅ Middleware para forzar HTTPS en formulario del admin
+from middleware.force_https_admin import ForceHttpsAdminFormMiddleware
+app.add_middleware(ForceHttpsAdminFormMiddleware)
+
+# ✅ Configuración CORS
 origins = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
@@ -41,7 +44,6 @@ origins = [
     "https://toolboxmattbackend-production.up.railway.app/",
 ]
 
-# ✅ Middleware CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -51,10 +53,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ✅ Setup del panel admin
+# ✅ Importa y registra el panel admin después de crear `app`
+from admin import setup_admin
 setup_admin(app)
 
-# ✅ Incluye los routers
+# ✅ Registro de rutas
 app.include_router(auth.router)
 app.include_router(toolbox_talks.router)
 app.include_router(reference_documents.router)

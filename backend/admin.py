@@ -1,71 +1,128 @@
+from sqladmin import Admin, ModelView
+from sqladmin.authentication import AuthenticationBackend
+from fastapi import Request
+from sqlalchemy.orm import Session
+from database import engine, SessionLocal
+from models import User, RoleEnum
+from security import verify_password, hash_password
+import jwt
 import os
-import sys
-from dotenv import load_dotenv
+from wtforms import Form, StringField, PasswordField, SelectField
+from wtforms.validators import DataRequired, Email
 
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from middleware.force_https_admin import ForceHttpsAdminFormMiddleware
+# Configuración de autenticación con JWT
+SECRET_KEY = os.getenv("SECRET_KEY", "super_secretkey")
+ALGORITHM = "HS256"
 
-# ✅ Agrega el path al backend para que se pueda importar desde cualquier punto
-sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'backend'))
+# Formulario personalizado para el admin
+class UserForm(Form):
+    username = StringField("Username", validators=[DataRequired()])
+    email = StringField("Email", validators=[DataRequired(), Email()])
+    role = SelectField("Role", choices=[("admin", "admin"), ("worker", "worker")])
+    password = PasswordField("Password")  # Campo virtual
 
-# ✅ Carga variables de entorno desde .env
-load_dotenv()
+# Backend de autenticación para SQLAdmin
+class AdminAuth(AuthenticationBackend):
+    def __init__(self, secret_key: str):
+        super().__init__(secret_key=secret_key)
+        self.secret_key = secret_key
 
-# ✅ Importa routers y configuración
-from routers import (
-    auth,
-    reference_documents,
-    signatures,
-    digital_signatures,
-    activity_logs,
-    toolbox_talks,
-    users,
-)
+    async def login(self, request: Request) -> bool:
+        form = await request.form()
+        username = form["username"]
+        password = form["password"]
 
-from admin import setup_admin
-import models
+        db: Session = SessionLocal()
+        user = db.query(User).filter(User.username == username).first()
+        db.close()
 
-# ✅ Instancia principal de FastAPI
-app = FastAPI()
+        if not user or not verify_password(str(password), str(user.hashed_password)):
+            return False
 
-# ✅ Middleware para corregir Mixed Content en /admin/login
-app.add_middleware(ForceHttpsAdminFormMiddleware)
+        token = jwt.encode({"sub": user.username}, self.secret_key, algorithm=ALGORITHM)
+        request.session.update({"token": token})
+        return True
 
-# ✅ CORS: permite que el frontend se comunique con el backend
-origins = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "http://localhost",
-    "http://127.0.0.1",
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "https://toolbox.downundersolutions.com",
-    "https://toolboxmattbackend-production.up.railway.app/",
-]
+    async def logout(self, request: Request) -> bool:
+        request.session.clear()
+        return True
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,
-    allow_origin_regex=r"https://.*\.netlify\.app",
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+    async def authenticate(self, request: Request) -> bool:
+        token = request.session.get("token")
+        if not token:
+            return False
+        try:
+            jwt.decode(token, self.secret_key, algorithms=[ALGORITHM])
+            return True
+        except jwt.PyJWTError:
+            return False
 
-# ✅ Admin panel con SQLAdmin
-setup_admin(app)
+auth_backend = AdminAuth(secret_key=SECRET_KEY)
 
-# ✅ Registro de rutas de la API
-app.include_router(auth.router)
-app.include_router(toolbox_talks.router)
-app.include_router(reference_documents.router)
-app.include_router(signatures.router)
-app.include_router(digital_signatures.router)
-app.include_router(activity_logs.router)
-app.include_router(users.router)
+# Vista de administración para el modelo User
+class UserAdmin(ModelView, model=User):
+    form_class = UserForm
 
-# ✅ Ruta básica de prueba
-@app.get("/ping")
-def ping():
-    return {"message": "pong"}
+    column_list = ["id", "username", "email", "role", "created_at"]
+    column_labels = {
+        "id": "ID",
+        "username": "Username",
+        "email": "Email",
+        "role": "Role",
+        "created_at": "Created At"
+    }
+
+    column_searchable_list = [User.username.name, User.email.name, User.role.name]
+    column_sortable_list = ["id", "username", "created_at"]
+
+    form_excluded_columns = [
+        User.id.name,
+        User.created_at.name,
+        User.hashed_password.name,
+        User.generated_toolbox_talks.name,
+        User.activities.name
+    ]
+
+    can_create = True
+    can_edit = True
+    can_delete = True
+
+    def is_accessible(self, request: Request) -> bool:
+        token = request.session.get("token")
+        if not token:
+            return False
+        try:
+            payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+            username = payload.get("sub")
+            if not username:
+                return False
+
+            db = SessionLocal()
+            user = db.query(User).filter(User.username == username).first()
+            db.close()
+
+            return user and user.role == RoleEnum.admin
+        except Exception:
+            return False
+
+    async def insert_model(self, request: Request, data: dict):
+        if data.get("password"):
+            data["hashed_password"] = hash_password(data["password"])
+        data.pop("password", None)
+        return await super().insert_model(request, data)
+
+    async def update_model(self, request: Request, pk: str, data: dict):
+        if data.get("password"):
+            data["hashed_password"] = hash_password(data["password"])
+        data.pop("password", None)
+        return await super().update_model(request, pk, data)
+
+# ✅ Registrar el panel de administración correctamente
+def setup_admin(app):
+    admin = Admin(
+        app,
+        engine,
+        authentication_backend=auth_backend,
+        base_url="/admin"  # <- IMPORTANTE: debe comenzar con "/"
+    )
+    admin.add_view(UserAdmin)
