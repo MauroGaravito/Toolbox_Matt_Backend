@@ -7,8 +7,8 @@ class ForceHttpsAdminFormMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         response = await call_next(request)
 
-        # Solo afecta el login del admin
-        if request.url.path == "/admin/login" and response.status_code == 200:
+        # Solo si estamos en /admin o rutas hijas
+        if request.url.path.startswith("/admin") and response.status_code == 200:
             body = b""
             async for chunk in response.body_iterator:
                 body += chunk
@@ -16,14 +16,11 @@ class ForceHttpsAdminFormMiddleware(BaseHTTPMiddleware):
             html = body.decode("utf-8")
 
             host = request.headers.get("host")
-            base_https = f"https://{host}"
+            if not host:
+                return response
 
-            # Reemplazar todas las rutas que empiezan por http://{host}
-            html = re.sub(
-                r'http://'+re.escape(host),
-                base_https,
-                html
-            )
+            # Reemplaza todos los recursos que vienen como HTTP por HTTPS
+            html = html.replace(f"http://{host}", f"https://{host}")
 
             return Response(content=html, status_code=200, media_type="text/html")
 
