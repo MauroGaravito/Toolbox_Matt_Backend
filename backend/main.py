@@ -34,12 +34,12 @@ app.add_middleware(ForceHttpsAdminFormMiddleware)
 
 # ✅ Configuración CORS
 origins = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "http://localhost",
-    "http://127.0.0.1",
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
+    "https://localhost:5173",
+    "https://127.0.0.1:5173",
+    "https://localhost",
+    "https://127.0.0.1",
+    "https://localhost:3000",
+    "https://127.0.0.1:3000",
     "https://toolbox.downundersolutions.com",
     "https://toolboxmattfrontend-production.up.railway.app",  # 👈 agrega esto
 ]
