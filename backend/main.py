@@ -41,7 +41,8 @@ origins = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
     "https://toolbox.downundersolutions.com",
-    "https://toolboxmattfrontend-production.up.railway.app",  # 👈 agrega esto
+    "https://toolboxmattfrontend-production.up.railway.app",
+    "https://toolbox-matt-frontend.onrender.com",  # 👈 URL de Render agregada
 ]
 
 app.add_middleware(
