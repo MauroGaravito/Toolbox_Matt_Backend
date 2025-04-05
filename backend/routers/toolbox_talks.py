@@ -11,8 +11,13 @@ from fastapi import Body
 from crud.faiss import create_faiss_index
 from security import get_current_user
 from crud.toolbox_talks import get_all_toolbox_talks, get_toolbox_talks_by_user
-from models import User, RoleEnum, ToolboxTalkParticipant,GeneratedToolboxTalk
+from models import User, RoleEnum, ToolboxTalkParticipant, GeneratedToolboxTalk
 from schemas.participants import ParticipantResponse
+from pydantic import BaseModel
+
+# Define the Pydantic model for the document ID list
+class DocumentIDList(BaseModel):
+    document_ids: List[int]
 
 router = APIRouter(
     prefix="/toolbox-talks",
@@ -62,14 +67,14 @@ def delete_existing_toolbox_talk(toolbox_talk_id: int, db: Session = Depends(get
 @router.post("/{toolbox_talk_id}/generate-index")
 def generate_index_for_toolbox_talk(
     toolbox_talk_id: int,
-    document_ids: List[int] = Body(...),
+    payload: DocumentIDList,  # Use the new Pydantic model here
     db: Session = Depends(get_db)
 ):
-    if not document_ids:
+    if not payload.document_ids:
         raise HTTPException(status_code=400, detail="No document IDs provided")
 
     try:
-        result = create_faiss_index(db, toolbox_talk_id, document_ids)
+        result = create_faiss_index(db, toolbox_talk_id, payload.document_ids)
         return {"message": "Index generated successfully", "faiss_file": result}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error generating index: {str(e)}")
