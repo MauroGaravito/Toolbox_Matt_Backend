@@ -1,1 +1,49 @@
+# Python
+*.pyc
+*.pyo
+__pycache__/
+*.pyd
+*.db
+*.sqlite3
+*.log
+*.pot
+*.py[cod]
+*$py.class
+
+# Docker
+**/docker-compose.override.yml
+.docker/
+docker-compose.yml
+Dockerfile
+
+# Virtualenv / Conda
+venv/
+env/
+env.bak/
+venv.bak/
+*.egg-info/
+*.dist-info/
+Pipfile.lock
+
+# Distribution / packaging
+.Python
+build/
+dist/
+*.egg
+*.tar.gz
+*.whl
+
+# PyCharm / VSCode / IDEs
+.idea/
+.vscode/
+*.iml
+
+# MacOS
+.DS_Store
+
+# Windows
+Thumbs.db
+Desktop.ini
+
+# Environment variable files (sensitive data)
 .env

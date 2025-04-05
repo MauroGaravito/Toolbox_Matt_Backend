@@ -1,6 +1,6 @@
 import faiss
 import numpy as np
-from models import ReferenceDocument, GeneratedToolboxTalk
+from models import ReferenceDocument, GeneratedToolboxTalk, DocumentFragment
 from utils import (
     extract_text_from_pdf,
     extract_text_from_docx,
@@ -11,6 +11,7 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 import os
 import pickle
+from datetime import datetime
 
 def create_faiss_index(db: Session, toolbox_talk_id: int, document_ids: list[int]):
     print("📥 GENERANDO FAISS INDEX PARA:")
@@ -44,7 +45,10 @@ def create_faiss_index(db: Session, toolbox_talk_id: int, document_ids: list[int
 
             embedding = generate_embeddings(text)
             embeddings.append(embedding)
-            fragments.append(text)  # 🧠 Guardar el texto completo como fragmento
+            fragments.append({
+                "document_id": doc.id,
+                "text": text
+            })  # Guardamos también el ID para insertarlos luego
 
         except Exception as e:
             print("❌ Error al generar índice:", e)
@@ -65,17 +69,24 @@ def create_faiss_index(db: Session, toolbox_talk_id: int, document_ids: list[int
 
     faiss.write_index(index, index_path)
 
-    # 💾 Guardar también el archivo .pkl con los fragmentos
+    # 💾 Guardar también el archivo .pkl con los fragmentos de texto
     metadata_path = index_path.replace(".index", ".pkl")
     with open(metadata_path, "wb") as f:
-        pickle.dump(fragments, f)
+        pickle.dump([frag["text"] for frag in fragments], f)
+
+    # 🧠 Guardar los fragmentos en la base de datos
+    for frag in fragments:
+        db_fragment = DocumentFragment(
+            document_id=frag["document_id"],
+            toolbox_talk_id=toolbox_talk_id,
+            content=frag["text"],
+            created_at=datetime.utcnow()
+        )
+        db.add(db_fragment)
+
+    db.commit()
 
     # ☁️ Subir archivo .index a Supabase
     upload_to_supabase(file_name)
 
-    # 🔗 Asociar el índice con el Toolbox Talk
-    toolbox_talk.index_file = file_name
-    db.commit()
-
     return {"message": "FAISS index created and uploaded successfully."}
-

@@ -1,32 +1,33 @@
 import sys
 import os
-
-# Agregar el directorio raíz del proyecto al sys.path
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
-
 from logging.config import fileConfig
-from sqlalchemy import engine_from_config, pool
+from sqlalchemy import engine_from_config, pool, create_engine
 from alembic import context
 
-# Importar después de modificar sys.path para evitar el error de "No module named backend"
-from models import Base  # Importa los modelos de la app
-from database import engine  # Asegura que usa la conexión
+# ✅ Cargar .env correctamente
+from dotenv import load_dotenv
+load_dotenv()
 
-# this is the Alembic Config object, which provides
-# access to the values within the .ini file in use.
+# ✅ Agregar el directorio raíz del proyecto al sys.path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+
+# ✅ Importar modelos y base de datos
+from models import Base
+
+# Alembic config object
 config = context.config
 
-# Interpret the config file for Python logging.
+# Configurar logging si hay archivo
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# Agregar metadatos para que Alembic detecte los modelos
+# Metadatos de los modelos
 target_metadata = Base.metadata
 
 
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode."""
-    url = config.get_main_option("sqlalchemy.url")
+    url = os.getenv("DATABASE_URL")
     context.configure(
         url=url,
         target_metadata=target_metadata,
@@ -39,10 +40,11 @@ def run_migrations_offline() -> None:
 
 
 def run_migrations_online() -> None:
-    """Run migrations in 'online' mode."""
-    connectable = engine_from_config(
-        config.get_section(config.config_ini_section, {}),
-        prefix="sqlalchemy.",
+    """Run migrations in 'online' mode using env variable."""
+    url = os.getenv("DATABASE_URL")
+
+    connectable = create_engine(
+        url,
         poolclass=pool.NullPool,
     )
 
@@ -53,6 +55,7 @@ def run_migrations_online() -> None:
             context.run_migrations()
 
 
+# Decide si ejecutar en modo online u offline
 if context.is_offline_mode():
     run_migrations_offline()
 else:

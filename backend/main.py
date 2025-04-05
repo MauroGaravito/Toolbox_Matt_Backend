@@ -1,17 +1,13 @@
 import os
-import sys
 from dotenv import load_dotenv
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-# ✅ Corrige path si backend está en subcarpeta
-sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'backend'))
-
-# ✅ Carga las variables de entorno
+# ✅ Carga variables de entorno
 load_dotenv()
 
-# ✅ Importa routers primero (no causa problemas)
+# ✅ Importa routers (sin backend.)
 from routers import (
     auth,
     reference_documents,
@@ -22,17 +18,19 @@ from routers import (
     users,
 )
 
-# ✅ Modelos de BD (asegura que estén inicializados antes del admin)
+# ✅ Modelos y base de datos
 import models
+import database
 
 # ✅ Instancia de FastAPI
 app = FastAPI()
 
-# ✅ Middleware para forzar HTTPS en formulario del admin
-from middleware.force_https_admin import ForceHttpsAdminFormMiddleware
-app.add_middleware(ForceHttpsAdminFormMiddleware)
+# ✅ Middleware para forzar HTTPS en el panel admin (solo en producción)
+if os.getenv("ENV") == "production":
+    from middleware.force_https_admin import ForceHttpsAdminFormMiddleware
+    app.add_middleware(ForceHttpsAdminFormMiddleware)
 
-# ✅ Configuración CORS
+# ✅ CORS
 origins = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
@@ -42,7 +40,7 @@ origins = [
     "http://127.0.0.1:3000",
     "https://toolbox.downundersolutions.com",
     "https://toolboxmattfrontend-production.up.railway.app",
-    "https://toolbox-matt-frontend.onrender.com",  # 👈 URL de Render agregada
+    "https://toolbox-matt-frontend.onrender.com",
 ]
 
 app.add_middleware(
@@ -53,7 +51,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ✅ Importa y registra el panel admin después de crear `app`
+# ✅ Panel Admin
 from admin import setup_admin
 setup_admin(app)
 
@@ -70,5 +68,3 @@ app.include_router(users.router)
 @app.get("/ping")
 def ping():
     return {"message": "pong"}
-
-# Render OK ?

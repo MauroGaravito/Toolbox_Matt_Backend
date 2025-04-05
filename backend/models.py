@@ -40,6 +40,7 @@ class GeneratedToolboxTalk(Base):
     documents = relationship("ReferenceDocument", back_populates="toolbox_talk", cascade="all, delete")
     digital_signatures = relationship("DigitalSignature", back_populates="toolbox_talk", cascade="all, delete")
     participants = relationship("ToolboxTalkParticipant", back_populates="toolbox_talk", cascade="all, delete")
+    vector_indexes = relationship("VectorIndex", back_populates="toolbox_talk", cascade="all, delete")
 
 # 🟠 Tabla de Documentos de Referencia
 class ReferenceDocument(Base):
@@ -103,3 +104,30 @@ class ToolboxTalkParticipant(Base):
 
     toolbox_talk = relationship("GeneratedToolboxTalk", back_populates="participants")
     user = relationship("User")
+
+# 🧠 Tabla para almacenar información de FAISS en la base de datos
+class VectorIndex(Base):
+    __tablename__ = "vector_indexes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    toolbox_talk_id = Column(Integer, ForeignKey("generated_toolbox_talks.id"), nullable=False)
+    file_path_index = Column(String, nullable=False)
+    file_path_metadata = Column(String, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    toolbox_talk = relationship("GeneratedToolboxTalk", back_populates="vector_indexes")
+
+# 📄 Tabla para almacenar fragmentos de texto procesados de cada documento
+class DocumentFragment(Base):
+    __tablename__ = "document_fragments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    document_id = Column(Integer, ForeignKey("reference_documents.id"), nullable=False)
+    toolbox_talk_id = Column(Integer, ForeignKey("generated_toolbox_talks.id"), nullable=False)
+    content = Column(Text, nullable=False)
+    embedding = Column(Text, nullable=True)  # O usa LargeBinary si guardas el array como binario
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Relaciones
+    document = relationship("ReferenceDocument", backref="fragments")
+    toolbox_talk = relationship("GeneratedToolboxTalk", backref="fragments")

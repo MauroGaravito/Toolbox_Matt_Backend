@@ -119,11 +119,14 @@ class UserAdmin(ModelView, model=User):
         return await super().update_model(request, pk, data)
 
 # ✅ Registrar el panel de administración correctamente
+
+
 def setup_admin(app):
     admin = Admin(
         app,
         engine,
         authentication_backend=auth_backend,
-        base_url="/admin"  # <- IMPORTANTE: debe comenzar con "/"
+        base_url="/admin"
     )
     admin.add_view(UserAdmin)
+
