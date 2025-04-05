@@ -70,3 +70,5 @@ app.include_router(users.router)
 @app.get("/ping")
 def ping():
     return {"message": "pong"}
+
+# Render OK ?
